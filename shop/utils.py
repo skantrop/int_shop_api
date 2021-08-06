@@ -26,4 +26,3 @@ def autoslug(fieldname):
                     instance.slug = slug + str_
         return model
     return decorator
-

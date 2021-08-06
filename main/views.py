@@ -8,10 +8,11 @@ from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 
 from .filters import ProductFilter
-from .models import Product, Review, Likes, Favorite, Cart
+from .models import Product, Review, Likes, Favorite
 from .permissions import IsAuthororAdminPermission, DenyAll
 from .serializers import (ProductListSerializer,
-                          ProductDetailsSerializer, ReviewSerializer, FavoriteListSerializer, CartSerializer)
+                          ProductDetailsSerializer, ReviewSerializer, FavoriteListSerializer)
+
 
 
 class ProductViewSet(viewsets.ModelViewSet):
@@ -74,6 +75,9 @@ class ProductViewSet(viewsets.ModelViewSet):
         serializer = ProductListSerializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
+
 
 class ReviewViewSet(mixins.CreateModelMixin,
                     mixins.UpdateModelMixin,
@@ -87,24 +91,8 @@ class ReviewViewSet(mixins.CreateModelMixin,
             return [IsAuthenticated()]
         return [IsAuthororAdminPermission()]
 
-
-class CartViewSet(viewsets.ModelViewSet):
-    queryset = Cart.objects.all()
-    serializer_class = CartSerializer
-
-    def get_permissions(self):
-        if self.action in ['create', 'list', 'retrieve']:
-            return [IsAuthenticated()]
-        elif self.action in ['update', 'partial_update']:
-            return [IsAdminUser()]
-        else:
-            return [DenyAll()]
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        if not self.request.user.is_staff:
-            queryset = queryset.filter(user=self.request.user)
-        return queryset
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
 
 
 class FavoriteView(ListAPIView):

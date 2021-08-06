@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Product, Review, Favorite, Cart, CartItem
+from .models import Product, Review, Favorite
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -8,13 +8,13 @@ User = get_user_model()
 class ProductListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
-        fields = ('id', 'title', 'price', 'image')
+        exclude = ('id', 'slug', 'author')
 
 
 class ProductDetailsSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
-        fields = '__all__'
+        fields = ('title', 'description', 'price', 'category', 'image')
 
     def get_rating(self, instance):
         total_rating = sum(instance.reviews.values_list('rating', flat=True))
@@ -72,37 +72,6 @@ class ReviewSerializer(serializers.ModelSerializer):
         rep = super().to_representation(instance)
         rep['author'] = ReviewAuthorSerializer(instance.author).data
         return rep
-
-
-class CartItemSerializer(serializers.ModelSerializer):
-    price = serializers.ReadOnlyField(source='get_total_price')
-
-    class Meta:
-        model = CartItem
-        fields = ('product', 'amount', 'price')
-
-
-class CartSerializer(serializers.ModelSerializer):
-    items = CartItemSerializer(many=True, write_only=True)
-
-    class Meta:
-        model = Cart
-        fields = ('id', 'items', )
-
-    def create(self, validated_data):
-        request = self.context.get('request')
-        items = validated_data.pop('items')
-        user = request.user
-        cart = Cart.objects.create(user=user)
-        for item in items:
-            CartItem.objects.create(cart=cart, product=item['product'], amount=item['amount'])
-        return cart
-
-    def to_representation(self, instance):
-        representation = super(CartSerializer, self).to_representation(instance)
-        representation['user'] = instance.user.email
-        representation['products'] = CartItemSerializer(instance.cartitem.all(), many=True).data
-        return representation
 
 
 class FavoriteListSerializer(serializers.ModelSerializer):
